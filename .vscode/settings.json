@@ -7,6 +7,19 @@
         "bitset": "cpp",
         "chrono": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "queue": "cpp",
+        "iterator": "cpp",
+        "stack": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "atomic": "cpp",
+        "deque": "cpp",
+        "ios": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "system_error": "cpp",
+        "vector": "cpp",
+        "iostream": "cpp"
     }
 }
