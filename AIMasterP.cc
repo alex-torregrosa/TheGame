@@ -18,6 +18,8 @@ struct PLAYER_NAME : public Player {
    */
 
   typedef vector<int> intV;
+  typedef map<int, int> intMap;
+
   typedef vector<intV> intMat;
   typedef vector<bool> boolV;
   typedef vector<boolV> boolMat;
@@ -30,17 +32,34 @@ struct PLAYER_NAME : public Player {
   }; */
   typedef map<Pos, Pos> posMap;
 
+  enum orkStates { SEARCH_C, SEARCH_P, KEEP, KILL, ORK_STATES_SIZE };
+
+  // Controller variables:
+  bool first = true;  // Run initial setup
+  intMap status;
+
+  // Devuelve las casillas vecinas a la que es posible moverse
   void veins(Pos pos, posV &res) {
     for (int d = 0; d != DIR_SIZE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
-      if (pos_ok(npos)) {
+      if (pos_ok(npos) and cell(npos).type != WATER) {
         res.push_back(npos);
       }
     }
   }
 
-  // Basic BFS, returns direction to move to reach first CellType
+  bool cmp_search(CellType ct, Cell c) {
+    if (ct == CITY)
+      return c.type == CITY and city_owner(c.city_id) != me();
+    else if (ct == PATH)
+      return c.type == PATH and path_owner(c.path_id) != me();
+
+    else
+      return false;
+  }
+
+  // Basic BFS, returns direction to move to reach first City
   Dir bfs(Pos pos, CellType ct) {
     PosQ q;
     boolMat visited(rows(), boolV(cols(), false));
@@ -53,14 +72,15 @@ struct PLAYER_NAME : public Player {
     bool found = false;
     while (!q.empty() and not found) {
       p = q.front();
-      if (cell(p).type == ct)
+      Cell c = cell(p);
+      if (cmp_search(ct, c))
         found = true;
       else {
         q.pop();
         neig.clear();
         veins(p, neig);
         for (Pos n : neig) {
-          if (cell(n).type != WATER and not visited[n.i][n.j]) {
+          if (not visited[n.i][n.j]) {
             q.push(n);
             parents[n] = p;
             visited[n.i][n.j] = true;
@@ -88,7 +108,10 @@ struct PLAYER_NAME : public Player {
    */
   void move(int id) {
     Unit u = unit(id);
-    Dir d = bfs(u.pos, CITY);
+    int s = status[id];
+    Dir d;
+    if (s == SEARCH_C) d = bfs(u.pos, CITY);
+    if (s == SEARCH_P) d = bfs(u.pos, PATH);
     execute(Command(id, d));
   }
 
@@ -97,6 +120,19 @@ struct PLAYER_NAME : public Player {
    */
   virtual void play() {
     intV m_orcos = orks(me());
+    if (first) {
+      first = false;
+      intV randP = random_permutation(m_orcos.size());
+      int count = 0;
+      for (int rd : randP) {
+        if (count < m_orcos.size() / 2)
+          status[m_orcos[rd]] = SEARCH_C;
+        else
+          status[m_orcos[rd]] = SEARCH_P;
+        count++;
+      }
+    }
+
     for (int id : m_orcos) {
       move(id);
     }
