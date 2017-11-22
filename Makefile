@@ -4,7 +4,7 @@
 #DUMMY_OBJ = AIDummy.o.Win64.Cygwin
 #DUMMY_OBJ = AIDummy.o.Win64.MinGW
 #DUMMY_OBJ = AIDummy.o.Win32.MinGW
-#DUMMY_OBJ = AIDummy.o.macOS
+DUMMY_OBJ = AIDummy.o.macOS
 
 # Add here any extra .o player files you want to link to the executable
 EXTRA_OBJ =
