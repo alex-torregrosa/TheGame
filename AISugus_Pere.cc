@@ -4,7 +4,7 @@
  * Write the name of your player and save this file
  * with the same name and .cc extension.
  */
-#define PLAYER_NAME MasterP
+#define PLAYER_NAME Sugus_Pere
 
 struct PLAYER_NAME : public Player {
   /**
@@ -38,11 +38,27 @@ struct PLAYER_NAME : public Player {
   typedef priority_queue<dPos, vector<dPos>, greater<dPos>>
       PosPQ;  // TODO Maybe change Container??
 
+  // Search comparisons
+  enum cmpSearch { CMP_CITY, CMP_PATH, CMP_ENEMY };
+
   // Valid ork states
-  enum orkStates { SEARCH_C, SEARCH_P, KEEP, KILL, ORK_STATES_SIZE };
+  enum orkStates {
+    ORK_DEFAULT,
+    ANSIAROTA_C,
+    ANSIAROTA_P,
+    GUARD,
+    KILLER,
+    FLEE,
+    SUICIDE,
+    ORK_STATES_SIZE
+  };
+
+  // Probs
+  intV probInitial = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
+                      ANSIAROTA_P, ANSIAROTA_P, ANSIAROTA_P, ANSIAROTA_P,
+                      KILLER,      KILLER};
 
   // Controller variables:
-  bool first = true;  // Run initial setup
   intMap status;
 
   // Devuelve las casillas vecinas a la que es posible moverse
@@ -51,23 +67,33 @@ struct PLAYER_NAME : public Player {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (pos_ok(npos) and cell(npos).type != WATER) {
-        res.push_back(npos);
+        if (cell(npos).unit_id != -1) {
+          if (unit(cell(npos).unit_id).player != me()) res.push_back(npos);
+        } else
+          res.push_back(npos);
       }
     }
   }
 
-  bool cmp_search(CellType ct, Cell c) {
-    if (ct == CITY)
+  bool cmp_search(cmpSearch ct, Cell& c, Unit& u) {
+    if (ct == CMP_CITY)
       return c.type == CITY and city_owner(c.city_id) != me();
-    else if (ct == PATH)
+    else if (ct == CMP_PATH)
       return c.type == PATH and path_owner(c.path_id) != me();
+    else if (ct == CMP_ENEMY) {
+      if (c.unit_id == -1) return false;
+      int pid = unit(c.unit_id).player;
+      return pid != -1 and
+             unit(c.unit_id).health <
+                 u.health;  // No se comprueba me() ya que lo hago en veins()
+    }
 
     else
       return false;
   }
 
   // Basic BFS, returns direction to move to reach first City
-  Dir bfs(Pos pos, CellType ct) {
+  Dir bfs(Pos pos, cmpSearch ct, Unit u) {
     PosQ q;
     boolMat visited(rows(), boolV(cols(), false));
     posMap parents;
@@ -79,7 +105,7 @@ struct PLAYER_NAME : public Player {
     while (!q.empty() and not found) {
       p = q.front();
       Cell c = cell(p);
-      if (cmp_search(ct, c))
+      if (cmp_search(ct, c, u))
         found = true;
       else {
         q.pop();
@@ -109,7 +135,7 @@ struct PLAYER_NAME : public Player {
     _unreachable();
   }
 
-  Dir dijkstra(Pos pos, CellType ct) {
+  Dir dijkstra(Pos pos, cmpSearch ct, Unit u) {
     PosPQ pq;
     intMat prices(rows(), intV(cols(), -1));
     posMap parents;
@@ -123,7 +149,7 @@ struct PLAYER_NAME : public Player {
     while (not found and not pq.empty()) {
       dp = pq.top();
       Cell c = cell(dp.p);
-      if (cmp_search(ct, c))
+      if (cmp_search(ct, c, u))
         found = true;
       else {
         pq.pop();
@@ -158,6 +184,10 @@ struct PLAYER_NAME : public Player {
     _unreachable();
   }
 
+  Dir behavior_killer(Unit u) {
+    // TODO suicide if low health
+    return dijkstra(u.pos, CMP_ENEMY, u);
+  }
   /**
    * Moves the player
    */
@@ -165,8 +195,13 @@ struct PLAYER_NAME : public Player {
     Unit u = unit(id);
     int s = status[id];
     Dir d;
-    if (s == SEARCH_C) d = dijkstra(u.pos, CITY);
-    if (s == SEARCH_P) d = dijkstra(u.pos, PATH);
+    if (s == ORK_DEFAULT) {
+      // Random initial status
+      s = status[id] = probInitial[random(0, 9)];
+    }
+    if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
+    if (s == ANSIAROTA_P) d = dijkstra(u.pos, CMP_PATH, u);
+    if (s == KILLER) d = behavior_killer(u);
     execute(Command(id, d));
   }
 
@@ -175,17 +210,8 @@ struct PLAYER_NAME : public Player {
    */
   virtual void play() {
     intV m_orcos = orks(me());
-    if (first) {
-      first = false;
-      intV randP = random_permutation(m_orcos.size());
-      int count = 0;
-      for (int rd : randP) {
-        if (count < m_orcos.size() / 2)
-          status[m_orcos[rd]] = SEARCH_C;
-        else
-          status[m_orcos[rd]] = SEARCH_P;
-        count++;
-      }
+    if (round() == 0) {
+      // First round code
     }
 
     for (int id : m_orcos) {

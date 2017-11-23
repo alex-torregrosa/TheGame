@@ -1,9 +1,11 @@
 AIDemo.o: AIDemo.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
   Defs.hh State.hh Action.hh Random.hh Registry.hh
-AIMasterP.o: AIMasterP.cc Player.hh Info.hh Settings.hh Structs.hh \
-  Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
+AIMasterP_basic.o: AIMasterP_basic.cc Player.hh Info.hh Settings.hh \
+  Structs.hh Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
 AINull.o: AINull.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
   Defs.hh State.hh Action.hh Random.hh Registry.hh
+AISugus_Pere.o: AISugus_Pere.cc Player.hh Info.hh Settings.hh Structs.hh \
+  Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
 Action.o: Action.cc Action.hh Structs.hh Utils.hh Defs.hh
 Board.o: Board.cc Board.hh Info.hh Settings.hh Structs.hh Utils.hh \
   Defs.hh State.hh Action.hh Random.hh
