@@ -20,6 +20,7 @@
         "string_view": "cpp",
         "system_error": "cpp",
         "vector": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "*.tcc": "cpp"
     }
 }

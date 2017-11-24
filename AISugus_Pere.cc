@@ -39,13 +39,12 @@ struct PLAYER_NAME : public Player {
       PosPQ;  // TODO Maybe change Container??
 
   // Search comparisons
-  enum cmpSearch { CMP_CITY, CMP_PATH, CMP_ENEMY };
+  enum cmpSearch { CMP_CITY, CMP_ENEMY };
 
   // Valid ork states
   enum orkStates {
     ORK_DEFAULT,
     ANSIAROTA_C,
-    ANSIAROTA_P,
     GUARD,
     KILLER,
     FLEE,
@@ -55,31 +54,52 @@ struct PLAYER_NAME : public Player {
 
   // Probs
   intV probInitial = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
-                      ANSIAROTA_P, ANSIAROTA_P, ANSIAROTA_P, ANSIAROTA_P,
+                      ANSIAROTA_C, ANSIAROTA_C, KILLER,      KILLER,
                       KILLER,      KILLER};
 
   // Controller variables:
   intMap status;
 
+  // Data functions
+
+  // Returrns percentage of my orks (0-100)
+  int pctOrcos() {
+    int total = nb_players() * nb_orks();
+    int myOrks = orks(me()).size();
+    return (100 * myOrks) / total;
+  }
+
+  // Indica si voy ganando
+  bool winning() {
+    for (int pl = 0; pl < nb_players(); ++pl)
+      if (pl != me() and total_score(me()) <= total_score(pl)) return false;
+    return true;
+  }
+
   // Devuelve las casillas vecinas a la que es posible moverse
-  void veins(Pos pos, posV& res) {
+  void veins(Pos pos, posV& res, Unit myUnit) {
     for (int d = 0; d != DIR_SIZE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (pos_ok(npos) and cell(npos).type != WATER) {
         if (cell(npos).unit_id != -1) {
-          if (unit(cell(npos).unit_id).player != me()) res.push_back(npos);
+          Unit un = unit(cell(npos).unit_id);
+          if (un.player == -1)
+            res.push_back(npos);
+          else if (un.player != me() and un.health < myUnit.health)
+            res.push_back(npos);
+
         } else
           res.push_back(npos);
       }
     }
   }
 
+  // Search Comparator
   bool cmp_search(cmpSearch ct, Cell& c, Unit& u) {
     if (ct == CMP_CITY)
-      return c.type == CITY and city_owner(c.city_id) != me();
-    else if (ct == CMP_PATH)
-      return c.type == PATH and path_owner(c.path_id) != me();
+      return (c.type == CITY and city_owner(c.city_id) != me()) or
+             (c.type == PATH and path_owner(c.path_id) != me());
     else if (ct == CMP_ENEMY) {
       if (c.unit_id == -1) return false;
       int pid = unit(c.unit_id).player;
@@ -110,7 +130,7 @@ struct PLAYER_NAME : public Player {
       else {
         q.pop();
         posV neig;
-        veins(p, neig);
+        veins(p, neig, u);
         for (Pos n : neig) {
           if (not visited[n.i][n.j]) {
             q.push(n);
@@ -135,6 +155,7 @@ struct PLAYER_NAME : public Player {
     _unreachable();
   }
 
+  // Dijkstra's algorithm for pretty orks
   Dir dijkstra(Pos pos, cmpSearch ct, Unit u) {
     PosPQ pq;
     intMat prices(rows(), intV(cols(), -1));
@@ -155,7 +176,7 @@ struct PLAYER_NAME : public Player {
         pq.pop();
 
         posV neig;
-        veins(dp.p, neig);
+        veins(dp.p, neig, u);
         for (Pos n : neig) {
           int newd = dp.d + 1 + cost(cell(n.i, n.j).type);
           if (prices[n.i][n.j] == -1 or newd < prices[n.i][n.j]) {
@@ -189,7 +210,7 @@ struct PLAYER_NAME : public Player {
     return dijkstra(u.pos, CMP_ENEMY, u);
   }
   /**
-   * Moves the player
+   * Moves the player, also state machine selection
    */
   void move(int id) {
     Unit u = unit(id);
@@ -200,7 +221,7 @@ struct PLAYER_NAME : public Player {
       s = status[id] = probInitial[random(0, 9)];
     }
     if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
-    if (s == ANSIAROTA_P) d = dijkstra(u.pos, CMP_PATH, u);
+
     if (s == KILLER) d = behavior_killer(u);
     execute(Command(id, d));
   }
