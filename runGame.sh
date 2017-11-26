@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./Game Sugus_Pere Demo Demo Demo -s $1 -i default.cnf -o default.out 2> cerr.file;
+./Game Sugus_Pere Sugus_v1 Sugus_v1 Sugus_v1 -s $1 -i default.cnf -o default.out 2> cerr.file;
 cp default.out Viewer/default.ork
 
 tail cerr.file;

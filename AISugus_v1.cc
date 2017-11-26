@@ -71,7 +71,7 @@ struct PLAYER_NAME : public Player {
   const intV* getProbs(int state) {
     if (state == DEFAULT) return &probDefault;
     if (state == ANSIAROTA) return &probAnsiarota;
-    if (state == KILLER) return &probKiller;
+    if (state == KILL) return &probKiller;
     _unreachable();
   }
   // Controller variables:
