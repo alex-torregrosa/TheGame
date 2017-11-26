@@ -52,11 +52,28 @@ struct PLAYER_NAME : public Player {
     ORK_STATES_SIZE
   };
 
+  // Game states
+  enum gameStates { DEFAULT, ANSIAROTA, KILL, GS_SIZE };
+  bool LPMODE = false;
+  int gameState = DEFAULT;
   // Probs
-  intV probInitial = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
-                      ANSIAROTA_C, ANSIAROTA_C, KILLER,      KILLER,
-                      KILLER,      KILLER};
+  const intV probDefault = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
+                            ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, KILLER,
+                            KILLER,      KILLER};
+  const intV probAnsiarota = {
+      ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
+      ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, KILLER};
+  const intV probKiller = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, KILLER,
+                           KILLER,      KILLER,      KILLER,      KILLER,
+                           KILLER,      KILLER};
+  const intV* actualProbs = &probDefault;
 
+  const intV* getProbs(int state) {
+    if (state == DEFAULT) return &probDefault;
+    if (state == ANSIAROTA) return &probAnsiarota;
+    if (state == KILLER) return &probKiller;
+    _unreachable();
+  }
   // Controller variables:
   intMap status;
 
@@ -218,7 +235,8 @@ struct PLAYER_NAME : public Player {
     Dir d;
     if (s == ORK_DEFAULT) {
       // Random initial status
-      s = status[id] = probInitial[random(0, 9)];
+      s = status[id] = (*actualProbs)[random(0, 9)];
+      cerr << "state: new guy in town: " << id << endl;
     }
     if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
 
@@ -226,6 +244,30 @@ struct PLAYER_NAME : public Player {
     execute(Command(id, d));
   }
 
+  void reassign() { status.clear(); }
+
+  void refactor() {
+    if (round() % 10 == 0) {
+      // Let's reorganitzate!
+      int lastState = gameState;
+      switch (gameState) {
+        case ANSIAROTA:
+          if (winning()) gameState = DEFAULT;
+          break;
+        case KILL:
+          if (pctOrcos() > 1.2 * (100 / nb_players())) gameState = DEFAULT;
+          break;
+        case DEFAULT:
+        default:
+
+          if (not winning()) gameState = ANSIAROTA;
+          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
+          break;
+      }
+      actualProbs = getProbs(gameState);
+      if (gameState != lastState) reassign();
+    }
+  }
   /**
    * Play method, invoked once per each round.
    */
@@ -234,6 +276,8 @@ struct PLAYER_NAME : public Player {
     if (round() == 0) {
       // First round code
     }
+
+    refactor();
 
     for (int id : m_orcos) {
       move(id);
