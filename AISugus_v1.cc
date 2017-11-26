@@ -63,14 +63,15 @@ struct PLAYER_NAME : public Player {
   const intV probAnsiarota = {
       ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
       ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, KILLER};
-  const intV probKiller = {ANSIAROTA_C, KILLER, KILLER, KILLER, KILLER,
-                           KILLER,      KILLER, KILLER, KILLER, KILLER};
+  const intV probKiller = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, KILLER,
+                           KILLER,      KILLER,      KILLER,      KILLER,
+                           KILLER,      KILLER};
   const intV* actualProbs = &probDefault;
 
   const intV* getProbs(int state) {
     if (state == DEFAULT) return &probDefault;
     if (state == ANSIAROTA) return &probAnsiarota;
-    if (state == KILL) return &probKiller;
+    if (state == KILLER) return &probKiller;
     _unreachable();
   }
   // Controller variables:
@@ -81,22 +82,15 @@ struct PLAYER_NAME : public Player {
   // Returrns percentage of my orks (0-100)
   int pctOrcos() {
     int total = nb_players() * nb_orks();
-
     int myOrks = orks(me()).size();
     return (100 * myOrks) / total;
   }
 
   // Indica si voy ganando
   bool winning() {
-    int max = 0;
-    // cerr << "state: **************************" << endl;
-    for (int pl = 0; pl < nb_players(); ++pl) {
-      int sc = total_score(pl);
-      if (sc > max) max = total_score(pl);
-      // cerr << "state: score of " << pl << "=" << sc << endl;
-    }
-    // cerr << "state: " << me() << endl;
-    return max == total_score(me());
+    for (int pl = 0; pl < nb_players(); ++pl)
+      if (pl != me() and total_score(me()) <= total_score(pl)) return false;
+    return true;
   }
 
   // Devuelve las casillas vecinas a la que es posible moverse
@@ -201,7 +195,7 @@ struct PLAYER_NAME : public Player {
         posV neig;
         veins(dp.p, neig, u);
         for (Pos n : neig) {
-          int newd = dp.d + 1 + 10 * cost(cell(n.i, n.j).type);
+          int newd = dp.d + 1 + cost(cell(n.i, n.j).type);
           if (prices[n.i][n.j] == -1 or newd < prices[n.i][n.j]) {
             pq.push(dPos(n, newd));
             prices[n.i][n.j] = newd;
@@ -242,7 +236,7 @@ struct PLAYER_NAME : public Player {
     if (s == ORK_DEFAULT) {
       // Random initial status
       s = status[id] = (*actualProbs)[random(0, 9)];
-      // cerr << "state: new guy in town: " << id << endl;
+      cerr << "state: new guy in town: " << id << endl;
     }
     if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
 
@@ -253,14 +247,12 @@ struct PLAYER_NAME : public Player {
   void reassign() { status.clear(); }
 
   void refactor() {
-    // cerr << "state, call rd" << round() << endl;
     if (round() % 10 == 0) {
       // Let's reorganitzate!
       int lastState = gameState;
       switch (gameState) {
         case ANSIAROTA:
           if (winning()) gameState = DEFAULT;
-          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
           break;
         case KILL:
           if (pctOrcos() > 1.2 * (100 / nb_players())) gameState = DEFAULT;
@@ -270,15 +262,10 @@ struct PLAYER_NAME : public Player {
 
           if (not winning()) gameState = ANSIAROTA;
           if (pctOrcos() < 100 / nb_players()) gameState = KILL;
-
           break;
       }
       actualProbs = getProbs(gameState);
-      if (gameState != lastState) {
-        reassign();
-        cerr << "state: cahnge from " << lastState << " to " << gameState
-             << " on " << round() << endl;
-      }
+      if (gameState != lastState) reassign();
     }
   }
   /**
