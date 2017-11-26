@@ -74,7 +74,7 @@ struct PLAYER_NAME : public Player {
     _unreachable();
   }
   // Controller variables:
-  intMap status;
+  intMap orkStatus;
 
   // Data functions
 
@@ -211,6 +211,7 @@ struct PLAYER_NAME : public Player {
       }
     }
     Pos p = dp.p;
+    Pos lastp = p;
 
     while (p != pos and parents[p] != pos) p = parents[p];
 
@@ -237,11 +238,11 @@ struct PLAYER_NAME : public Player {
    */
   void move(int id) {
     Unit u = unit(id);
-    int s = status[id];
+    int s = orkStatus[id];
     Dir d;
     if (s == ORK_DEFAULT) {
       // Random initial status
-      s = status[id] = (*actualProbs)[random(0, 9)];
+      s = orkStatus[id] = (*actualProbs)[random(0, 9)];
       // cerr << "state: new guy in town: " << id << endl;
     }
     if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
@@ -250,7 +251,7 @@ struct PLAYER_NAME : public Player {
     execute(Command(id, d));
   }
 
-  void reassign() { status.clear(); }
+  void reassign() { orkStatus.clear(); }
 
   void refactor() {
     // cerr << "state, call rd" << round() << endl;
@@ -291,6 +292,9 @@ struct PLAYER_NAME : public Player {
     }
 
     refactor();
+
+    // Hem gastat massa cpu
+    if (status(me()) > 0.98) return;
 
     for (int id : m_orcos) {
       move(id);
