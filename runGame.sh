@@ -1,8 +1,8 @@
 #!/bin/bash
-
-./Game Sugus_Pere Sugus_v1 Sugus_v1 Sugus_v1 -s $1 -i default.cnf -o default.out 2> cerr.file;
+echo "./Game Sugus_Pere $1 $1 $1 -s $2 -i default.cnf -o default.out 2> cerr.file;"
+./Game Sugus_Pere $1 $1 $1 -s $2 -i default.cnf -o default.out 2> cerr.file;
 cp default.out Viewer/default.ork
 
-tail cerr.file;
-cat cerr.file|grep state;
+tail cerr.file | grep "info: player(s)";
+cat cerr.file|grep 0_state;
 rm default.out cerr.file;

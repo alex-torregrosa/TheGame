@@ -4,7 +4,7 @@ from random import randint
 import sys
 
 def partida(me, other):
-    seed = randint(0,264826876824638674)
+    seed = randint(0, 2147483647)
     game = subprocess.run(["./game.sh",  me, other, str(seed)], stdout=subprocess.PIPE)
     res = str(game.stdout).split()[2]
     if res != me:
@@ -34,9 +34,9 @@ print("Starting tests")
 
 
 for el in list:
-    if el != me:
+    if el == "MastP_1":
         print("Jugando contra",el,end=" ", flush=True)
-        for x in range(0,10):
+        for x in range(0,100):
             print(".", end="",flush=True)
             if not partida(me, el):
                 exit()

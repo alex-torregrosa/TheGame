@@ -6,6 +6,8 @@ AISugus_Pere.o: AISugus_Pere.cc Player.hh Info.hh Settings.hh Structs.hh \
   Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
 AISugus_v1.o: AISugus_v1.cc Player.hh Info.hh Settings.hh Structs.hh \
   Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
+AISugus_v1_5.o: AISugus_v1_5.cc Player.hh Info.hh Settings.hh Structs.hh \
+  Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
 Action.o: Action.cc Action.hh Structs.hh Utils.hh Defs.hh
 Board.o: Board.cc Board.hh Info.hh Settings.hh Structs.hh Utils.hh \
   Defs.hh State.hh Action.hh Random.hh

@@ -4,7 +4,7 @@
  * Write the name of your player and save this file
  * with the same name and .cc extension.
  */
-#define PLAYER_NAME Sugus_Pere
+#define PLAYER_NAME Sugus_v1_5
 
 struct PLAYER_NAME : public Player {
   /**
@@ -179,7 +179,7 @@ struct PLAYER_NAME : public Player {
   }
 
   // Dijkstra's algorithm for pretty orks
-  vector<Dir> dijkstra(Pos pos, cmpSearch ct, Unit u) {
+  Dir dijkstra(Pos pos, cmpSearch ct, Unit u) {
     PosPQ pq;
     intMat prices(rows(), intV(cols(), -1));
     posMap parents;
@@ -213,30 +213,16 @@ struct PLAYER_NAME : public Player {
     Pos p = dp.p;
     Pos lastp = p;
 
-    while (p != pos and parents[p] != pos){
-      lastp = p;
-      p = parents[p];
-    } 
+    while (p != pos and parents[p] != pos) p = parents[p];
 
-    vector<Dir> dv(2);
-    if (p == pos) return dv;
+    if (p == pos) return Dir(NONE);
 
-    
     // Calculate Initial direction
     for (int d = 0; d != DIR_SIZE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (npos == p) {
-        dv[0] = dir;
-        break; //Aaaargh!!!!!! (TODO: pensar algo mejor)
-      }
-    }
-    for (int d = 0; d != DIR_SIZE; ++d) {
-      Dir dir = Dir(d);
-      Pos npos = p + dir;
-      if (npos == lastp) {
-        dv[1] = dir;
-        return dv;
+        return dir;
       }
     }
 
@@ -245,7 +231,7 @@ struct PLAYER_NAME : public Player {
 
   Dir behavior_killer(Unit u) {
     // TODO suicide if low health
-    return dijkstra(u.pos, CMP_ENEMY, u)[0];
+    return dijkstra(u.pos, CMP_ENEMY, u);
   }
   /**
    * Moves the player, also state machine selection
@@ -259,7 +245,7 @@ struct PLAYER_NAME : public Player {
       s = orkStatus[id] = (*actualProbs)[random(0, 9)];
       // cerr << "state: new guy in town: " << id << endl;
     }
-    if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u)[0];
+    if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u);
 
     if (s == KILLER) d = behavior_killer(u);
     execute(Command(id, d));
@@ -291,8 +277,8 @@ struct PLAYER_NAME : public Player {
       actualProbs = getProbs(gameState);
       if (gameState != lastState) {
         reassign();
-        cerr << me() << "_state: cahnge from " << lastState << " to "
-             << gameState << " on " << round() << endl;
+        cerr << "state: cahnge from " << lastState << " to " << gameState
+             << " on " << round() << endl;
       }
     }
   }
