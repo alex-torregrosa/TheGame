@@ -27,6 +27,8 @@ struct PLAYER_NAME : public Player {
   typedef queue<Pos> PosQ;
   typedef vector<Pos> posV;
   typedef map<Pos, Pos> posMap;
+  // misc types
+  typedef map<int, Dir> dirMap;
 
   // Position + distance
   struct dPos {
@@ -54,7 +56,7 @@ struct PLAYER_NAME : public Player {
 
   // Game states
   enum gameStates { DEFAULT, ANSIAROTA, KILL, GS_SIZE };
-  bool LPMODE = false;
+  bool LPMODE = false;  // Low-power mode
   int gameState = DEFAULT;
   // Probs
   const intV probDefault = {ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C, ANSIAROTA_C,
@@ -73,8 +75,13 @@ struct PLAYER_NAME : public Player {
     if (state == KILL) return &probKiller;
     _unreachable();
   }
+
   // Controller variables:
   intMap orkStatus;
+  dirMap nextPos;
+
+  // Test
+  int total_pass = 0;
 
   // Data functions
 
@@ -191,6 +198,9 @@ struct PLAYER_NAME : public Player {
     bool found = false;
 
     while (not found and not pq.empty()) {
+      // TEMP
+      total_pass++;
+      // TEMP
       dp = pq.top();
       Cell c = cell(dp.p);
       if (cmp_search(ct, c, u))
@@ -201,7 +211,7 @@ struct PLAYER_NAME : public Player {
         posV neig;
         veins(dp.p, neig, u);
         for (Pos n : neig) {
-          int newd = dp.d + 1 + 10 * cost(cell(n.i, n.j).type);
+          int newd = dp.d + 1 + 8 * cost(cell(n.i, n.j).type);
           if (prices[n.i][n.j] == -1 or newd < prices[n.i][n.j]) {
             pq.push(dPos(n, newd));
             prices[n.i][n.j] = newd;
@@ -213,22 +223,21 @@ struct PLAYER_NAME : public Player {
     Pos p = dp.p;
     Pos lastp = p;
 
-    while (p != pos and parents[p] != pos){
+    while (p != pos and parents[p] != pos) {
       lastp = p;
       p = parents[p];
-    } 
+    }
 
     vector<Dir> dv(2);
     if (p == pos) return dv;
 
-    
     // Calculate Initial direction
     for (int d = 0; d != DIR_SIZE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (npos == p) {
         dv[0] = dir;
-        break; //Aaaargh!!!!!! (TODO: pensar algo mejor)
+        break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
       }
     }
     for (int d = 0; d != DIR_SIZE; ++d) {
@@ -259,7 +268,14 @@ struct PLAYER_NAME : public Player {
       s = orkStatus[id] = (*actualProbs)[random(0, 9)];
       // cerr << "state: new guy in town: " << id << endl;
     }
-    if (s == ANSIAROTA_C) d = dijkstra(u.pos, CMP_CITY, u)[0];
+    if (s == ANSIAROTA_C) {
+      if (round() % 2 == 0 or not LPMODE) {
+        vector<Dir> dv = dijkstra(u.pos, CMP_CITY, u);
+        d = dv[0];
+        nextPos[id] = dv[1];
+      } else
+        d = nextPos[id];
+    }
 
     if (s == KILLER) d = behavior_killer(u);
     execute(Command(id, d));
@@ -291,24 +307,39 @@ struct PLAYER_NAME : public Player {
       actualProbs = getProbs(gameState);
       if (gameState != lastState) {
         reassign();
-        cerr << me() << "_state: cahnge from " << lastState << " to "
-             << gameState << " on " << round() << endl;
+        // cerr << me() << "_state: cahnge from " << lastState << " to "
+        //     << gameState << " on " << round() << endl;
       }
     }
+  }
+
+  void power_check() {
+    // double max_pct = 1 / nb_rounds();
+    // double act_pct = (1 - status(me())) / (nb_rounds() - round());
+    if (winning())
+      LPMODE = status(me()) > 0.4;
+    else
+      LPMODE = status(me()) > 0.7;
   }
   /**
    * Play method, invoked once per each round.
    */
   virtual void play() {
+    // if (round() == 199) cerr << me() << "_state: usage=" << total_pass <<
+    // endl;
+
+    // Hem gastat massa cpu, parem abans de que el jutge ens mati
+    if (status(me()) > 0.95) return;
+    // Sobrao
+    if (winning() and pctOrcos() > 90) return;
+    power_check();
+
     intV m_orcos = orks(me());
     if (round() == 0) {
       // First round code
     }
 
     refactor();
-
-    // Hem gastat massa cpu
-    if (status(me()) > 0.98) return;
 
     for (int id : m_orcos) {
       move(id);
