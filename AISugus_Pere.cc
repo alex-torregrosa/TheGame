@@ -26,6 +26,7 @@ struct PLAYER_NAME : public Player {
   // Pos types
   typedef queue<Pos> PosQ;
   typedef vector<Pos> posV;
+  typedef vector<posV> posMat;
   typedef map<Pos, Pos> posMap;
   // misc types
   typedef map<int, Dir> dirMap;
@@ -112,21 +113,24 @@ struct PLAYER_NAME : public Player {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (pos_ok(npos) and cell(npos).type != WATER) {
-        if (cell(npos).unit_id != -1) {
-          Unit un = unit(cell(npos).unit_id);
-          if (un.player == -1)
-            res.push_back(npos);
-          else if (un.player != me() and un.health < myUnit.health)
-            res.push_back(npos);
-
-        } else
-          res.push_back(npos);
+        res.push_back(npos);
       }
     }
   }
 
+  bool hasBeefyEnemy(Cell c, Unit myUnit) {
+    if (c.unit_id != -1) {
+      Unit un = unit(c.unit_id);
+      if (un.player == me()) {
+        return true;  // No te puedes pisar a ti mismo, no valida
+      } else if (un.health > myUnit.health)
+        return true;  // Tio gordo, no lo pises o te comerá
+    }
+    return false;
+  }
+
   // Search Comparator
-  bool cmp_search(cmpSearch ct, Cell& c, Unit& u) {
+  bool cmp_search(cmpSearch ct, const Cell& c, const Unit& u) {
     if (ct == CMP_CITY)
       return (c.type == CITY and city_owner(c.city_id) != me()) or
              (c.type == PATH and path_owner(c.path_id) != me());
@@ -142,110 +146,67 @@ struct PLAYER_NAME : public Player {
       return false;
   }
 
-  // Basic BFS, returns direction to move to reach first City
-  Dir bfs(Pos pos, cmpSearch ct, Unit u) {
-    PosQ q;
-    boolMat visited(rows(), boolV(cols(), false));
-    posMap parents;
-    visited[pos.i][pos.j] = true;
-    q.push(pos);
-
-    Pos p;
-    bool found = false;
-    while (!q.empty() and not found) {
-      p = q.front();
-      Cell c = cell(p);
-      if (cmp_search(ct, c, u))
-        found = true;
-      else {
-        q.pop();
-        posV neig;
-        veins(p, neig, u);
-        for (Pos n : neig) {
-          if (not visited[n.i][n.j]) {
-            q.push(n);
-            parents[n] = p;
-            visited[n.i][n.j] = true;
-          }
-        }
-      }
-    }
-    while (p != pos and parents[p] != pos) p = parents[p];
-    if (p == pos) return Dir(NONE);
-
-    // Calculate Initial direction
-    for (int d = 0; d != DIR_SIZE; ++d) {
-      Dir dir = Dir(d);
-      Pos npos = pos + dir;
-      if (npos == p) {
-        return dir;
-      }
-    }
-
-    _unreachable();
-  }
+  /***************
+   * SEARCH ALGS *
+   ***************/
 
   // Dijkstra's algorithm for pretty orks
-  vector<Dir> dijkstra(Pos pos, cmpSearch ct, Unit u) {
-    PosPQ pq;
+  pair<Dir, Dir> dijkstra(const Pos& pos, cmpSearch ct, const Unit& u) {
     intMat prices(rows(), intV(cols(), -1));
-    posMap parents;
-    prices[pos.i][pos.j] = 0;
+    posMat parents(rows(), posV(cols()));
+    boolMat visited(rows(), boolV(cols(), false));
+    PosPQ pq;
     pq.push(dPos(pos, 0));
 
-    dPos dp =
-        pq.top();  // Initialized to valid value, will be overwritten later
     bool found = false;
-
+    Pos p = pos;
     while (not found and not pq.empty()) {
-      // TEMP
-      total_pass++;
-      // TEMP
-      dp = pq.top();
-      Cell c = cell(dp.p);
-      if (cmp_search(ct, c, u))
-        found = true;
-      else {
-        pq.pop();
-
-        posV neig;
-        veins(dp.p, neig, u);
-        for (Pos n : neig) {
-          int newd = dp.d + 1 + 8 * cost(cell(n.i, n.j).type);
-          if (prices[n.i][n.j] == -1 or newd < prices[n.i][n.j]) {
-            pq.push(dPos(n, newd));
-            prices[n.i][n.j] = newd;
-            parents[n] = dp.p;
+      p = pq.top().p;
+      pq.pop();
+      if (not visited[p.i][p.j]) {
+        Cell c = cell(p.i, p.j);
+        if (p != pos and hasBeefyEnemy(c, u))
+          visited[p.i][p.j] = true;
+        else if (cmp_search(ct, c, u))
+          found = true;
+        else {
+          visited[p.i][p.j] = true;
+          posV res;
+          veins(p, res, u);
+          for (Pos v : res) {
+            int c = 1 + 8 * cost(cell(v.i, v.j).type);
+            if (prices[v.i][v.j] == -1 or
+                prices[v.i][v.j] > prices[p.i][p.j] + c) {
+              prices[v.i][v.j] = prices[p.i][p.j] + c;
+              parents[v.i][v.j] = p;
+              pq.push(dPos(v, prices[v.i][v.j]));
+            }
           }
         }
       }
     }
-    Pos p = dp.p;
+    // Not found
+    if (p == pos) return make_pair(Dir(NONE), Dir(NONE));
+
     Pos lastp = p;
-
-    while (p != pos and parents[p] != pos) {
+    pair<Dir, Dir> dp;
+    // Calculate the first 2 positions
+    while (parents[p.i][p.j] != pos) {
       lastp = p;
-      p = parents[p];
+      p = parents[p.i][p.j];
     }
-
-    vector<Dir> dv(2);
-    if (p == pos) return dv;
-
-    // Calculate Initial direction
+    // First direction
     for (int d = 0; d != DIR_SIZE; ++d) {
-      Dir dir = Dir(d);
-      Pos npos = pos + dir;
-      if (npos == p) {
-        dv[0] = dir;
+      if (pos + Dir(d) == p) {
+        dp.first = Dir(d);
         break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
       }
     }
+    // Second dir
     for (int d = 0; d != DIR_SIZE; ++d) {
-      Dir dir = Dir(d);
-      Pos npos = p + dir;
-      if (npos == lastp) {
-        dv[1] = dir;
-        return dv;
+      if (p + Dir(d) == lastp) {
+        dp.second = Dir(d);
+        return dp;
       }
     }
 
@@ -254,7 +215,7 @@ struct PLAYER_NAME : public Player {
 
   Dir behavior_killer(Unit u) {
     // TODO suicide if low health
-    return dijkstra(u.pos, CMP_ENEMY, u)[0];
+    return dijkstra(u.pos, CMP_ENEMY, u).first;
   }
   /**
    * Moves the player, also state machine selection
@@ -270,9 +231,9 @@ struct PLAYER_NAME : public Player {
     }
     if (s == ANSIAROTA_C) {
       if (round() % 2 == 0 or not LPMODE) {
-        vector<Dir> dv = dijkstra(u.pos, CMP_CITY, u);
-        d = dv[0];
-        nextPos[id] = dv[1];
+        pair<Dir, Dir> dv = dijkstra(u.pos, CMP_CITY, u);
+        d = dv.first;
+        nextPos[id] = dv.second;
       } else
         d = nextPos[id];
     }

@@ -36,7 +36,7 @@ print("Starting tests")
 
 
 for el in list:
-    if el == "Sugus2":
+    if el == "Dummy":
         print("Jugando contra", el, end=" ", flush=True)
         for x in range(0, 100):
             print(".", end="", flush=True)
