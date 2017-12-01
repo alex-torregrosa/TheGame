@@ -80,11 +80,30 @@ struct PLAYER_NAME : public Player {
   // Controller variables:
   intMap orkStatus;
   dirMap nextPos;
-
+  intMat enemys;
   // Test
-  int total_pass = 0;
+  // int total_pass = 0;
 
   // Data functions
+  void getEnemys() {
+    enemys = intMat(rows(), intV(cols(), -1));
+    Unit ork;
+    // cerr << "OOOOORKKKS" << endl;
+    for (int o = 0; o < nb_units(); ++o) {
+      ork = unit(o);
+      int& i = ork.pos.i;
+      int& j = ork.pos.j;
+      if (ork.player != me()) {
+                // cerr << i << " " << j << endl;
+        enemys[i][j] = ork.health;
+        if (i > 0) enemys[i - 1][j] = ork.health;
+        if (j > 0) enemys[i][j - 1] = ork.health;
+        if (i < rows() - 1) enemys[i + 1][j] = ork.health;
+        if (j < cols() - 1) enemys[i][j + 1] = ork.health;
+      } else
+        enemys[i][j] = initial_health() + 1;
+    }
+  }
 
   // Returrns percentage of my orks (0-100)
   int pctOrcos() {
@@ -294,6 +313,8 @@ struct PLAYER_NAME : public Player {
     // Sobrao
     if (winning() and pctOrcos() > 90) return;
     power_check();
+
+    getEnemys();
 
     intV m_orcos = orks(me());
     if (round() == 0) {
