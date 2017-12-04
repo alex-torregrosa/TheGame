@@ -95,13 +95,21 @@ struct PLAYER_NAME : public Player {
       int& j = ork.pos.j;
       if (ork.player != me()) {
                 // cerr << i << " " << j << endl;
-        enemys[i][j] = ork.health;
-        if (i > 0) enemys[i - 1][j] = ork.health;
-        if (j > 0) enemys[i][j - 1] = ork.health;
-        if (i < rows() - 1) enemys[i + 1][j] = ork.health;
-        if (j < cols() - 1) enemys[i][j + 1] = ork.health;
+        enemys[i][j] = max(enemys[i][j],ork.health);
+        if (i > 0) enemys[i - 1][j] = max(enemys[i-1][j],ork.health);
+        if (j > 0) enemys[i][j - 1] = max(enemys[i][j-1],ork.health);
+        if (i < rows() - 1) enemys[i + 1][j] = max(enemys[i+1][j],ork.health);
+        if (j < cols() - 1) enemys[i][j + 1] = max(enemys[i][j+1],ork.health);
+        
+        
+        //fase 2
+        if (i > 1) enemys[i - 2][j] = max(enemys[i-2][j],ork.health);
+        if (j > 1) enemys[i][j - 2] = max(enemys[i][j-2],ork.health);
+        if (i < rows() - 2) enemys[i + 2][j] = max(enemys[i+2][j],ork.health);
+        if (j < cols() - 2) enemys[i][j + 2] = max(enemys[i][j+2],ork.health);
       } else
-        enemys[i][j] = initial_health() + 1;
+        if(enemys[i][j] == -1 ) enemys[i][j] = initial_health() + 1;
+        else enemys[i][j] += initial_health() + 1;
     }
   }
 
@@ -137,15 +145,10 @@ struct PLAYER_NAME : public Player {
     }
   }
 
-  bool hasBeefyEnemy(Cell c, Unit myUnit) {
-    if (c.unit_id != -1) {
-      Unit un = unit(c.unit_id);
-      if (un.player == me()) {
-        return true;  // No te puedes pisar a ti mismo, no valida
-      } else if (un.health > myUnit.health)
-        return true;  // Tio gordo, no lo pises o te comerá
-    }
-    return false;
+  bool hasBeefyEnemy(Pos p, Unit myUnit) {
+    
+      if(enemys[p.i][p.j] > myUnit.health) return true;
+      else return false;
   }
 
   // Search Comparator
@@ -184,7 +187,7 @@ struct PLAYER_NAME : public Player {
       pq.pop();
       if (not visited[p.i][p.j]) {
         Cell c = cell(p.i, p.j);
-        if (p != pos and hasBeefyEnemy(c, u))
+        if (p != pos and hasBeefyEnemy(p, u))
           visited[p.i][p.j] = true;
         else if (cmp_search(ct, c, u))
           found = true;
@@ -218,7 +221,7 @@ struct PLAYER_NAME : public Player {
     for (int d = 0; d != DIR_SIZE; ++d) {
       if (pos + Dir(d) == p) {
         dp.first = Dir(d);
-        break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
+       /*Hecto*/break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
       }
     }
     // Second dir
@@ -258,7 +261,12 @@ struct PLAYER_NAME : public Player {
     }
 
     if (s == KILLER) d = behavior_killer(u);
+    
+    Pos nxt = u.pos +d;
+    enemys[u.pos.i][u.pos.j] -= initial_health() + 1;
+    enemys[nxt.i][nxt.j] += initial_health() + 1;
     execute(Command(id, d));
+    
   }
 
   void reassign() { orkStatus.clear(); }
@@ -287,8 +295,8 @@ struct PLAYER_NAME : public Player {
       actualProbs = getProbs(gameState);
       if (gameState != lastState) {
         reassign();
-        // cerr << me() << "_state: cahnge from " << lastState << " to "
-        //     << gameState << " on " << round() << endl;
+         cerr << me() << "_state: cahnge from " << lastState << " to "
+             << gameState << " on " << round() << endl;
       }
     }
   }

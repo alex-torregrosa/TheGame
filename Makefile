@@ -7,7 +7,7 @@ DUMMY_OBJ = AIDummy.o.Linux64
 #DUMMY_OBJ = AIDummy.o.macOS
 
 # Add here any extra .o player files you want to link to the executable
-EXTRA_OBJ = AIRocher_v2.o.linux64
+EXTRA_OBJ = AIRocher_v2.o.linux64 AIRocher_v5.o.linux64
 
 # Configuration
 OPTIMIZE = 2 # Optimization level    (0 to 3)
@@ -48,8 +48,8 @@ clean:
 	rm -rf Game  *.o *.exe Makefile.deps
 
 Game:  $(OBJ) Game.o Main.o $(PLAYERS_OBJ) 
-	$(CXX) $^ -o $@ $(LDFLAGS) -static
-
+	$(CXX) $^ -o $@ $(LDFLAGS) 
+	
 SecGame: $(OBJ) SecGame.o SecMain.o
 	$(CXX) $^ -o $@ $(LDFLAGS) -lrt
 
