@@ -48,7 +48,7 @@ clean:
 	rm -rf Game  *.o *.exe Makefile.deps
 
 Game:  $(OBJ) Game.o Main.o $(PLAYERS_OBJ) 
-	$(CXX) $^ -o $@ $(LDFLAGS) 
+	$(CXX) $^ -o $@ $(LDFLAGS) -static
 	
 SecGame: $(OBJ) SecGame.o SecMain.o
 	$(CXX) $^ -o $@ $(LDFLAGS) -lrt

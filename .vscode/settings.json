@@ -26,6 +26,7 @@
         "limits": "cpp",
         "__locale": "cpp",
         "locale": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "cstdlib": "cpp"
     }
 }

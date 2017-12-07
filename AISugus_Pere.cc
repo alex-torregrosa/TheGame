@@ -70,6 +70,7 @@ struct PLAYER_NAME : public Player {
                            KILLER,      KILLER, KILLER, KILLER, KILLER};
   const intV* actualProbs = &probDefault;
 
+  // Probabilities getter
   const intV* getProbs(int state) {
     if (state == DEFAULT) return &probDefault;
     if (state == ANSIAROTA) return &probAnsiarota;
@@ -81,10 +82,35 @@ struct PLAYER_NAME : public Player {
   intMap orkStatus;
   dirMap nextPos;
   intMat enemys;
-  // Test
+  boolMat free;
+  size_t nOrks;
+  // Algo efficiency test:
   // int total_pass = 0;
 
+  // Prints a int matrix
+  void printMat(const intMat& m) {
+    cerr << "Matrix:" << endl;
+    for (intV row : m) {
+      for (int el : row) {  // Dat C++11
+        cerr << el << " ";
+      }
+      cerr << endl;
+    }
+    cerr << ":xirtaM" << endl;
+  }
+
   // Data functions
+
+  // Sets enemy position, if possible
+  void setEnemy(int i, int j, int health) {
+    if (i < 0 or j < 0) return;
+    if (i > rows() - 1 or j > cols() - 1) return;
+    if (cell(Pos(i, j)).type == WATER) return;
+    int coste = cost(cell(Pos(i, j)).type);
+    enemys[i][j] = max(enemys[i][j], health + coste);
+  }
+
+  // Set enemy pos for n=2
   void getEnemys() {
     enemys = intMat(rows(), intV(cols(), -1));
     Unit ork;
@@ -94,26 +120,28 @@ struct PLAYER_NAME : public Player {
       int& i = ork.pos.i;
       int& j = ork.pos.j;
       if (ork.player != me()) {
-                // cerr << i << " " << j << endl;
-        enemys[i][j] = max(enemys[i][j],ork.health);
-        if (i > 0) enemys[i - 1][j] = max(enemys[i-1][j],ork.health);
-        if (j > 0) enemys[i][j - 1] = max(enemys[i][j-1],ork.health);
-        if (i < rows() - 1) enemys[i + 1][j] = max(enemys[i+1][j],ork.health);
-        if (j < cols() - 1) enemys[i][j + 1] = max(enemys[i][j+1],ork.health);
-        
-        
-        //fase 2
-        if (i > 1) enemys[i - 2][j] = max(enemys[i-2][j],ork.health);
-        if (j > 1) enemys[i][j - 2] = max(enemys[i][j-2],ork.health);
-        if (i < rows() - 2) enemys[i + 2][j] = max(enemys[i+2][j],ork.health);
-        if (j < cols() - 2) enemys[i][j + 2] = max(enemys[i][j+2],ork.health);
-      } else
-        if(enemys[i][j] == -1 ) enemys[i][j] = initial_health() + 1;
-        else enemys[i][j] += initial_health() + 1;
+        // cerr << i << " " << j << endl;
+        // Position
+        setEnemy(i, j, ork.health);
+        // 1 mov ahead
+        setEnemy(i - 1, j, ork.health);
+        setEnemy(i, j - 1, ork.health);
+        setEnemy(i + 1, j, ork.health);
+        setEnemy(i, j + 1, ork.health);
+        // 2 ahead
+        setEnemy(i - 2, j, ork.health);
+        setEnemy(i, j - 2, ork.health);
+        setEnemy(i + 2, j, ork.health);
+        setEnemy(i, j + 2, ork.health);
+        setEnemy(i + 1, j + 1, ork.health);
+        setEnemy(i + 1, j - 1, ork.health);
+        setEnemy(i - 1, j + 1, ork.health);
+        setEnemy(i - 1, j - 1, ork.health);
+      }
     }
   }
 
-  // Returrns percentage of my orks (0-100)
+  // Returns percentage of my orks (0-100)
   int pctOrcos() {
     int total = nb_players() * nb_orks();
 
@@ -136,7 +164,7 @@ struct PLAYER_NAME : public Player {
 
   // Devuelve las casillas vecinas a la que es posible moverse
   void veins(Pos pos, posV& res, Unit myUnit) {
-    for (int d = 0; d != DIR_SIZE; ++d) {
+    for (int d = 0; d != NONE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
       if (pos_ok(npos) and cell(npos).type != WATER) {
@@ -145,10 +173,12 @@ struct PLAYER_NAME : public Player {
     }
   }
 
+  // Checks position for enemy
   bool hasBeefyEnemy(Pos p, Unit myUnit) {
-    
-      if(enemys[p.i][p.j] > myUnit.health) return true;
-      else return false;
+    if (enemys[p.i][p.j] > myUnit.health)
+      return true;
+    else
+      return false;
   }
 
   // Search Comparator
@@ -187,18 +217,20 @@ struct PLAYER_NAME : public Player {
       pq.pop();
       if (not visited[p.i][p.j]) {
         Cell c = cell(p.i, p.j);
-        if (p != pos and hasBeefyEnemy(p, u))
+        if (p != pos and
+            hasBeefyEnemy(p, u))  // Enemy check (pos ho fem despres)
           visited[p.i][p.j] = true;
-        else if (cmp_search(ct, c, u))
+        else if (cmp_search(ct, c, u))  // Found check
           found = true;
-        else {
+        else {  // Calculate next
           visited[p.i][p.j] = true;
           posV res;
           veins(p, res, u);
           for (Pos v : res) {
-            int c = 1 + 8 * cost(cell(v.i, v.j).type);
-            if (prices[v.i][v.j] == -1 or
-                prices[v.i][v.j] > prices[p.i][p.j] + c) {
+            int c = 1 + (500 / (u.health + 10)) *
+                            cost(cell(v.i, v.j).type);  // Cell change cost
+            if (free[v.i][v.j] and (prices[v.i][v.j] == -1 or
+                                    prices[v.i][v.j] > prices[p.i][p.j] + c)) {
               prices[v.i][v.j] = prices[p.i][p.j] + c;
               parents[v.i][v.j] = p;
               pq.push(dPos(v, prices[v.i][v.j]));
@@ -221,7 +253,7 @@ struct PLAYER_NAME : public Player {
     for (int d = 0; d != DIR_SIZE; ++d) {
       if (pos + Dir(d) == p) {
         dp.first = Dir(d);
-       /*Hecto*/break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
+        /*Hecto*/ break;  // Aaaargh!!!!!! (TODO: pensar algo mejor)
       }
     }
     // Second dir
@@ -235,43 +267,110 @@ struct PLAYER_NAME : public Player {
     _unreachable();
   }
 
+  // Killer behavior
   Dir behavior_killer(Unit u) {
     // TODO suicide if low health
     return dijkstra(u.pos, CMP_ENEMY, u).first;
   }
+
+  // Capture behavior
+  Dir behavior_ansiarota(const Unit& u, int id) {
+    if (round() % 2 == 0 or not LPMODE) {
+      pair<Dir, Dir> dv = dijkstra(u.pos, CMP_CITY, u);
+
+      nextPos[id] = dv.second;
+      return dv.first;
+    } else
+      return nextPos[id];
+  }
+
+  // Selects direction to move when blocked
+  Dir microMax(Pos p, Unit my) {
+    int minDist = INT_MAX;
+    int uid = -1;
+    for (int o = 0; o < nb_units(); ++o) {
+      Unit u = unit(o);
+      if (u.player != me() and u.health > my.health) {
+        int dist = abs(p.i - u.pos.i) + abs(p.j - u.pos.j);
+        if (dist < minDist) {
+          minDist = dist;
+          uid = u.id;
+        }
+      }
+    }
+    if (uid == -1) return Dir(NONE);
+    Pos enp = unit(uid).pos;
+    int coste = INT_MAX;
+    Dir out = Dir(NONE);
+    // Bottom
+    if (enp.i <= p.i) {
+      Cell c = cell(p + Dir(BOTTOM));
+      if (c.type != WATER and cost(c.type) < coste) {
+        coste = cost(c.type);
+        out = Dir(BOTTOM);
+      }
+    }
+    // Top
+    if (enp.i >= p.i) {
+      Cell c = cell(p + Dir(TOP));
+      if (c.type != WATER and cost(c.type) < coste) {
+        coste = cost(c.type);
+        out = Dir(TOP);
+      }
+    }
+    // Left
+    if (enp.j >= p.j) {
+      Cell c = cell(p + Dir(LEFT));
+      if (c.type != WATER and cost(c.type) < coste) {
+        coste = cost(c.type);
+        out = Dir(LEFT);
+      }
+    }
+    // Right
+    if (enp.j <= p.j) {
+      Cell c = cell(p + Dir(RIGHT));
+      if (c.type != WATER and cost(c.type) < coste) {
+        coste = cost(c.type);
+        out = Dir(RIGHT);
+      }
+    }
+
+    return out;
+  }
+
   /**
    * Moves the player, also state machine selection
    */
   void move(int id) {
     Unit u = unit(id);
     int s = orkStatus[id];
-    Dir d;
+    Dir d = Dir(NONE);
     if (s == ORK_DEFAULT) {
       // Random initial status
       s = orkStatus[id] = (*actualProbs)[random(0, 9)];
       // cerr << "state: new guy in town: " << id << endl;
     }
     if (s == ANSIAROTA_C) {
-      if (round() % 2 == 0 or not LPMODE) {
-        pair<Dir, Dir> dv = dijkstra(u.pos, CMP_CITY, u);
-        d = dv.first;
-        nextPos[id] = dv.second;
-      } else
-        d = nextPos[id];
+      d = behavior_ansiarota(u, id);
     }
 
     if (s == KILLER) d = behavior_killer(u);
-    
-    Pos nxt = u.pos +d;
-    enemys[u.pos.i][u.pos.j] -= initial_health() + 1;
-    enemys[nxt.i][nxt.j] += initial_health() + 1;
+
+    if (d == NONE) {
+      d = microMax(u.pos, u);
+    }
+
+    Pos nxt = u.pos + d;
+    // enemys[u.pos.i][u.pos.j] -= initial_health() + 1;
+    free[nxt.i][nxt.j] = false;
     execute(Command(id, d));
-    
   }
 
+  // Reassigns the orks
   void reassign() { orkStatus.clear(); }
 
-  void refactor() {
+  // Adjusts the strategy
+  void refactor(const intV& orcos) {
     // cerr << "state, call rd" << round() << endl;
     if (round() % 10 == 0) {
       // Let's reorganitzate!
@@ -279,31 +378,36 @@ struct PLAYER_NAME : public Player {
       switch (gameState) {
         case ANSIAROTA:
           if (winning()) gameState = DEFAULT;
-          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 80 / nb_players()) gameState = KILL;
           break;
         case KILL:
-          if (pctOrcos() > 1.2 * (100 / nb_players())) gameState = DEFAULT;
+          if (pctOrcos() >= (101 / nb_players())) gameState = DEFAULT;
           break;
         case DEFAULT:
         default:
 
           if (not winning()) gameState = ANSIAROTA;
-          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 80 / nb_players()) gameState = KILL;
 
           break;
       }
       actualProbs = getProbs(gameState);
+      // Canvi d'estat, reassignem orcs
       if (gameState != lastState) {
         reassign();
-         cerr << me() << "_state: cahnge from " << lastState << " to "
+        cerr << me() << "_state: cahnge from " << lastState << " to "
              << gameState << " on " << round() << endl;
+        return;
+      }
+      // Han matat/ hi ha nous, reassignem per a garantir els %
+      if (orcos.size() != nOrks) {
+        nOrks = orcos.size();
+        reassign();
       }
     }
   }
-
+  // Basic low power mode checking
   void power_check() {
-    // double max_pct = 1 / nb_rounds();
-    // double act_pct = (1 - status(me())) / (nb_rounds() - round());
     if (winning())
       LPMODE = status(me()) > 0.4;
     else
@@ -313,6 +417,7 @@ struct PLAYER_NAME : public Player {
    * Play method, invoked once per each round.
    */
   virtual void play() {
+    // Algo-opti code
     // if (round() == 199) cerr << me() << "_state: usage=" << total_pass <<
     // endl;
 
@@ -323,13 +428,16 @@ struct PLAYER_NAME : public Player {
     power_check();
 
     getEnemys();
-
+    // printMat(enemys);
+    //*******************************************
+    free = boolMat(rows(), boolV(cols(), true));
     intV m_orcos = orks(me());
     if (round() == 0) {
       // First round code
+      nOrks = m_orcos.size();
     }
 
-    refactor();
+    refactor(m_orcos);
 
     for (int id : m_orcos) {
       move(id);

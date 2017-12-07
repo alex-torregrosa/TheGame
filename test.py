@@ -34,14 +34,15 @@ if not found:
 
 print("Starting tests")
 
-
+perdidas = 0
 for el in list:
-    if el == "Rocher_v2":
+    if el == "Rocher5":
         print("Jugando contra", el, end=" ", flush=True)
         for x in range(0, 100):
             print(".", end="", flush=True)
             if not partida(me, el):
                 # exit()
+                perdidas += 1
                 pass
         print()
-print("Todas las partidas ganadas!")
+print(100 - perdidas, " partidas ganadas!")
