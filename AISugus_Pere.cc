@@ -88,7 +88,7 @@ struct PLAYER_NAME : public Player {
   // int total_pass = 0;
 
   // Prints a int matrix
-  void printMat(const intMat& m) {
+  /*void printMat(const intMat& m) {
     cerr << "Matrix:" << endl;
     for (intV row : m) {
       for (int el : row) {  // Dat C++11
@@ -97,7 +97,7 @@ struct PLAYER_NAME : public Player {
       cerr << endl;
     }
     cerr << ":xirtaM" << endl;
-  }
+  }*/
 
   // Data functions
 
@@ -334,7 +334,8 @@ struct PLAYER_NAME : public Player {
         out = Dir(RIGHT);
       }
     }
-
+    // cerr << me() << "_state: Moving from " << p.i << "," << p.j << " in dir "
+    //    << out << endl;
     return out;
   }
 
@@ -378,16 +379,16 @@ struct PLAYER_NAME : public Player {
       switch (gameState) {
         case ANSIAROTA:
           if (winning()) gameState = DEFAULT;
-          if (pctOrcos() < 80 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 90 / nb_players()) gameState = KILL;
           break;
         case KILL:
-          if (pctOrcos() >= (101 / nb_players())) gameState = DEFAULT;
+          if (pctOrcos() >= (110 / nb_players())) gameState = DEFAULT;
           break;
         case DEFAULT:
         default:
 
           if (not winning()) gameState = ANSIAROTA;
-          if (pctOrcos() < 80 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 90 / nb_players()) gameState = KILL;
 
           break;
       }
@@ -395,8 +396,8 @@ struct PLAYER_NAME : public Player {
       // Canvi d'estat, reassignem orcs
       if (gameState != lastState) {
         reassign();
-        cerr << me() << "_state: cahnge from " << lastState << " to "
-             << gameState << " on " << round() << endl;
+        // cerr << me() << "_state: cahnge from " << lastState << " to "
+        //     << gameState << " on " << round() << endl;
         return;
       }
       // Han matat/ hi ha nous, reassignem per a garantir els %

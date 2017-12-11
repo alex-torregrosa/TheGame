@@ -1,7 +1,6 @@
 """Game Tester"""
 import subprocess
 from random import randint
-import sys
 
 
 def partida(me, other):
@@ -10,8 +9,8 @@ def partida(me, other):
         ["./game.sh",  me, other, str(seed)], stdout=subprocess.PIPE)
     res = str(game.stdout).split()[2]
     if res != me:
-        print()
-        print("Partida #", seed, "contra", other, "perdida")
+        # print()
+        # print("Partida #", seed, "contra", other, "perdida")
         return False
     else:
         return True
@@ -43,6 +42,6 @@ for el in list:
             if not partida(me, el):
                 # exit()
                 perdidas += 1
-                pass
+
         print()
-print(100 - perdidas, " partidas ganadas!")
+        print(100 - perdidas, " partidas ganadas!")
