@@ -9,14 +9,14 @@ def partida(me, other):
         ["./game.sh",  me, other, str(seed)], stdout=subprocess.PIPE)
     res = str(game.stdout).split()[2]
     if res != me:
-        # print()
-        # print("Partida #", seed, "contra", other, "perdida")
+        print()
+        print("Partida #", seed, "contra", other, "perdida")
         return False
     else:
         return True
 
 
-me = "Sugus_Pere"
+me = "Rocher6"
 
 list = str(subprocess.run(["./Game", "-l"], stdout=subprocess.PIPE).stdout)
 list = list[2:-3].split("\\n")
@@ -35,7 +35,7 @@ print("Starting tests")
 
 perdidas = 0
 for el in list:
-    if el == "Rocher5":
+    if el == "Sugus_v1_5":
         print("Jugando contra", el, end=" ", flush=True)
         for x in range(0, 100):
             print(".", end="", flush=True)
