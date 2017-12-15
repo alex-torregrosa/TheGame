@@ -4,7 +4,7 @@
  * Write the name of your player and save this file
  * with the same name and .cc extension.
  */
-#define PLAYER_NAME FearTheSugus
+#define PLAYER_NAME FeartheSugus
 
 struct PLAYER_NAME : public Player {
   /**
@@ -163,7 +163,7 @@ struct PLAYER_NAME : public Player {
   }
 
   // Devuelve las casillas vecinas a la que es posible moverse
-  void veins(Pos pos, posV& res, Unit myUnit) {
+  void veins(Pos pos, posV& res) {
     for (int d = 0; d != NONE; ++d) {
       Dir dir = Dir(d);
       Pos npos = pos + dir;
@@ -225,7 +225,7 @@ struct PLAYER_NAME : public Player {
         else {  // Calculate next
           visited[p.i][p.j] = true;
           posV res;
-          veins(p, res, u);
+          veins(p, res);
           for (Pos v : res) {
             int c = 1 + (500 / (u.health + 10)) *
                             cost(cell(v.i, v.j).type);  // Cell change cost
@@ -273,8 +273,28 @@ struct PLAYER_NAME : public Player {
     return dijkstra(u.pos, CMP_ENEMY, u).first;
   }
 
+  Dir ataka(Pos p, int health) {
+    posV ve;
+    veins(p, ve);
+    for (Pos pv : ve) {
+      if (cell(pv).unit_id != -1 and
+          unit(cell(pv).unit_id).health < health - cost(cell(pv).type)) {
+        if (pv.i > p.i) return Dir(BOTTOM);
+        if (pv.i < p.i) return Dir(TOP);
+        if (pv.j > p.j) return Dir(RIGHT);
+        if (pv.j < p.j) return Dir(LEFT);
+      }
+    }
+    return Dir(NONE);
+  }
+
   // Capture behavior
   Dir behavior_ansiarota(const Unit& u, int id) {
+    // Simple low health attack
+    Dir d = ataka(u.pos, u.health);
+
+    // Search for cities
+    if (d != Dir(NONE)) return d;
     if (round() % 2 == 0 or not LPMODE) {
       pair<Dir, Dir> dv = dijkstra(u.pos, CMP_CITY, u);
 
@@ -304,32 +324,40 @@ struct PLAYER_NAME : public Player {
     Dir out = Dir(NONE);
     // Bottom
     if (enp.i <= p.i) {
-      Cell c = cell(p + Dir(BOTTOM));
-      if (c.type != WATER and cost(c.type) < coste) {
+      Pos np = p + Dir(BOTTOM);
+      Cell c = cell(np);
+      if (c.type != WATER and free[np.i][np.j] and
+          10 * cost(c.type) + enemys[np.i][np.j] < coste) {
         coste = cost(c.type);
         out = Dir(BOTTOM);
       }
     }
     // Top
     if (enp.i >= p.i) {
-      Cell c = cell(p + Dir(TOP));
-      if (c.type != WATER and cost(c.type) < coste) {
+      Pos np = p + Dir(TOP);
+      Cell c = cell(np);
+      if (c.type != WATER and free[np.i][np.j] and
+          10 * cost(c.type) + enemys[np.i][np.j] < coste) {
         coste = cost(c.type);
         out = Dir(TOP);
       }
     }
     // Left
     if (enp.j >= p.j) {
-      Cell c = cell(p + Dir(LEFT));
-      if (c.type != WATER and cost(c.type) < coste) {
+      Pos np = p + Dir(LEFT);
+      Cell c = cell(np);
+      if (c.type != WATER and free[np.i][np.j] and
+          10 * cost(c.type) + enemys[np.i][np.j] < coste) {
         coste = cost(c.type);
         out = Dir(LEFT);
       }
     }
     // Right
     if (enp.j <= p.j) {
-      Cell c = cell(p + Dir(RIGHT));
-      if (c.type != WATER and cost(c.type) < coste) {
+      Pos np = p + Dir(RIGHT);
+      Cell c = cell(np);
+      if (c.type != WATER and free[np.i][np.j] and
+          10 * cost(c.type) + enemys[np.i][np.j] < coste) {
         coste = cost(c.type);
         out = Dir(RIGHT);
       }
@@ -363,6 +391,7 @@ struct PLAYER_NAME : public Player {
 
     Pos nxt = u.pos + d;
     // enemys[u.pos.i][u.pos.j] -= initial_health() + 1;
+    free[u.pos.i][u.pos.j] = false;
     free[nxt.i][nxt.j] = false;
     execute(Command(id, d));
   }
@@ -379,7 +408,7 @@ struct PLAYER_NAME : public Player {
       switch (gameState) {
         case ANSIAROTA:
           if (winning()) gameState = DEFAULT;
-          if (pctOrcos() < 90 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 95 / nb_players()) gameState = KILL;
           break;
         case KILL:
           if (pctOrcos() >= (110 / nb_players())) gameState = DEFAULT;
@@ -388,7 +417,7 @@ struct PLAYER_NAME : public Player {
         default:
 
           if (not winning()) gameState = ANSIAROTA;
-          if (pctOrcos() < 90 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 95 / nb_players()) gameState = KILL;
 
           break;
       }
@@ -439,6 +468,11 @@ struct PLAYER_NAME : public Player {
     }
 
     refactor(m_orcos);
+
+    // Set free pos
+    for (int id : m_orcos) {
+      free[unit(id).pos.i][unit(id).pos.j] = false;
+    }
 
     for (int id : m_orcos) {
       move(id);

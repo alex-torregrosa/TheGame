@@ -1,5 +1,3 @@
-AIDemo.o: AIDemo.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
- Defs.hh State.hh Action.hh Random.hh Registry.hh
 AIMasterP_basic.o: AIMasterP_basic.cc Player.hh Info.hh Settings.hh \
  Structs.hh Utils.hh Defs.hh State.hh Action.hh Random.hh Registry.hh
 AISugus_Pere.o: AISugus_Pere.cc Player.hh Info.hh Settings.hh Structs.hh \

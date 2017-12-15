@@ -7,8 +7,8 @@ DUMMY_OBJ = AIDummy.o.Linux64
 #DUMMY_OBJ = AIDummy.o.macOS
 
 # Add here any extra .o player files you want to link to the executable
-EXTRA_OBJ = AIRocher_v2.o.linux64 AIRocher_v5.o.linux64 AIRocher6.o.Linux64
-
+EXTRA_OBJ =  AIRocher_v5.o.linux64 AIRocher6.o.Linux64
+#AIRocher_v2.o.linux64
 # Configuration
 OPTIMIZE = 2 # Optimization level    (0 to 3)
 DEBUG    = 0 # Compile for debugging (0 or 1)
