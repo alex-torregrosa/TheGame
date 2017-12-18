@@ -5,7 +5,7 @@ import fileinput
 from random import randint, sample, shuffle
 from shutil import copyfile
 
-NUM_CORES = 4
+NUM_CORES = 32
 NUM_JUGADORS = NUM_CORES * 4
 
 MAX_POND = 5000
@@ -93,7 +93,7 @@ def reproduce(a, b):
 
 def make():
     print("Compiling...", end="", flush=True)
-    subprocess.run(["make", "-f", "SuperMakefile"],
+    subprocess.run(["make", "-f", "SuperMakefile","-j"+str(NUM_CORES-1)],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(" DONE")
 

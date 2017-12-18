@@ -3,7 +3,7 @@ import subprocess
 from random import randint
 import threading
 
-N_THREADS = 4
+N_THREADS = 32
 N_PART = 100
 
 
@@ -34,7 +34,7 @@ def worker(enemy):
             perdidas += 1
 
 
-me = "FearTheSugus"
+me = "FeartheSugus"
 
 list = str(subprocess.run(["./Game", "-l"], stdout=subprocess.PIPE).stdout)
 list = list[2:-3].split("\\n")
