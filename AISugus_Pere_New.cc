@@ -4,7 +4,7 @@
  * Write the name of your player and save this file
  * with the same name and .cc extension.
  */
-#define PLAYER_NAME fearTheSugus
+#define PLAYER_NAME feartheSugus
 
 struct PLAYER_NAME : public Player {
   /**
@@ -227,7 +227,7 @@ struct PLAYER_NAME : public Player {
           posV res;
           veins(p, res);
           for (Pos v : res) {
-            int c = 1 + (3000 / (u.health + 10)) *
+            int c = 1 + (2000 / (u.health + 10)) *
                             cost(cell(v.i, v.j).type);  // Cell change cost
             if (free[v.i][v.j] and (prices[v.i][v.j] == -1 or
                                     prices[v.i][v.j] > prices[p.i][p.j] + c)) {
@@ -408,16 +408,16 @@ struct PLAYER_NAME : public Player {
       switch (gameState) {
         case ANSIAROTA:
           if (winning()) gameState = DEFAULT;
-          if (pctOrcos() < 95 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
           break;
         case KILL:
-          if (pctOrcos() >= (110 / nb_players())) gameState = DEFAULT;
+          if (pctOrcos() >= (130 / nb_players())) gameState = DEFAULT;
           break;
         case DEFAULT:
         default:
 
           if (not winning()) gameState = ANSIAROTA;
-          if (pctOrcos() < 95 / nb_players()) gameState = KILL;
+          if (pctOrcos() < 100 / nb_players()) gameState = KILL;
 
           break;
       }
